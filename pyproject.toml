@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "raxtik-source-faers"
+version = "0.1.0"
+description = "FDA FAERS/AEMS data source connector, parser, and extractor for raxtik-etl"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+authors = [
+    { name = "VigilForms Team" }
+]
+dependencies = [
+    "raxtik-etl>=0.1.0",
+    "duckdb>=1.1.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.5.0",
+]
+
+[project.entry-points."raxtik_etl.sources"]
+faers = "raxtik_source_faers.adapter:FAERSAdapter"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/raxtik_source_faers"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
