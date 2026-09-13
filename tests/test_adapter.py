@@ -5,7 +5,9 @@ from pathlib import Path
 from raxtik_etl.sources.protocol import SourceArtifact
 from raxtik_source_faers.adapter import FAERSAdapter
 
-CACHE_2004Q1 = Path("/Users/prateekdagar/workspace/vigilforms-org/raxtik-etl/data/raw/archives_cache/2004q1_ascii.zip")
+import os
+
+CACHE_2004Q1 = Path(os.environ.get("FAERS_CACHE_DIR", Path(__file__).parents[2] / "raxtik-etl/data/raw/archives_cache")) / "2004q1_ascii.zip"
 
 
 def test_faers_adapter_extraction(tmp_path: Path):
