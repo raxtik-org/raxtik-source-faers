@@ -4,6 +4,7 @@ import io
 import zipfile
 
 import pytest
+
 from raxtik_source_faers.signatures.resolver import detect_archive_signature
 
 

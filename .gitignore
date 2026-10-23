@@ -26,3 +26,8 @@ venv/
 htmlcov/
 .ruff_cache/
 .DS_Store
+
+# uv lock & coverage
+uv.lock
+coverage.xml
+*.xml

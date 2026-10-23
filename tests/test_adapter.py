@@ -1,13 +1,21 @@
 """Integration test for FAERSAdapter extracting into DuckDB."""
 
-import duckdb
+import os
 from pathlib import Path
+
+import duckdb
 from raxtik_etl.sources.protocol import SourceArtifact
+
 from raxtik_source_faers.adapter import FAERSAdapter
 
-import os
-
-CACHE_2004Q1 = Path(os.environ.get("FAERS_CACHE_DIR", Path(__file__).parents[2] / "raxtik-etl/data/raw/archives_cache")) / "2004q1_ascii.zip"
+CACHE_2004Q1 = (
+    Path(
+        os.environ.get(
+            "FAERS_CACHE_DIR", Path(__file__).parents[2] / "raxtik-etl/data/raw/archives_cache"
+        )
+    )
+    / "2004q1_ascii.zip"
+)
 
 
 def test_faers_adapter_extraction(tmp_path: Path):

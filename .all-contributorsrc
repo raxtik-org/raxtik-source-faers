@@ -1,0 +1,28 @@
+{
+  "projectName": "raxtik-source-faers",
+  "projectOwner": "raxtik-org",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "CONTRIBUTORS.md",
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "prateekdagar",
+      "name": "Prateek Dagar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1041938?v=4",
+      "profile": "https://github.com/prateekdagar",
+      "contributions": [
+        "code",
+        "doc",
+        "infra",
+        "maintenance"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "linkToUsage": true
+}

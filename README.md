@@ -1,5 +1,10 @@
 # raxtik-source-faers
 
+[![CI](https://github.com/raxtik-org/raxtik-source-faers/actions/workflows/ci.yml/badge.svg)](https://github.com/raxtik-org/raxtik-source-faers/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/raxtik-org/raxtik-source-faers/branch/main/graph/badge.svg)](https://codecov.io/gh/raxtik-org/raxtik-source-faers)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](./LICENSE)
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors)
+
 Official FDA FAERS/AEMS data source connector, signature resolver, and canonical extractor for `raxtik-etl`.
 
 ---
@@ -16,6 +21,7 @@ Official FDA FAERS/AEMS data source connector, signature resolver, and canonical
 │  - Raw ASCII extract staging ($ delimiter, escapes)    │
 │  - Historical column mapping rules (S1, S2, S3)        │
 │  - FDA official reference code-sets (_code_*)          │
+│  - Archive downloader & streaming ASCII parser         │
 │  - Registers entry point: raxtik_etl.sources -> faers  │
 └───────────────────────────┬────────────────────────────┘
                             │ Implements SourceAdapter
@@ -49,9 +55,9 @@ Install in your environment alongside `raxtik-etl`:
 pip install raxtik-source-faers
 ```
 
-Or for local development:
+Or install with `raxtik-etl[faers]`:
 ```bash
-pip install -e /path/to/raxtik-source-faers
+pip install "raxtik-etl[faers]"
 ```
 
 Once installed, the connector is automatically discovered by `raxtik-etl` via Python entry-points:
@@ -64,43 +70,74 @@ faers = "raxtik_source_faers.adapter:FAERSAdapter"
 
 ## 🚀 Usage
 
-### Via `raxtik-etl` CLI
-```bash
-# Build a standalone package using the faers connector
-raxtik-etl build-package --source faers --release 2004Q1 --zip-path /path/to/2004q1_ascii.zip
+### 1. Download Quarterly FDA Archives
+```python
+from raxtik_source_faers import download_quarterly_archive
+
+# Downloads and verifies official quarterly FDA archive zip
+zip_path = download_quarterly_archive(year=2024, quarter=1, dest_dir="data/raw")
+print(f"Downloaded to {zip_path}")
 ```
 
-### Programmatic Usage
+### 2. Extract into Canonical DuckDB via Adapter
 ```python
 import duckdb
 from pathlib import Path
 from raxtik_etl.sources.protocol import SourceArtifact
-from raxtik_source_faers.adapter import FAERSAdapter
+from raxtik_source_faers import FAERSAdapter
 
 con = duckdb.connect("my_database.duckdb")
 adapter = FAERSAdapter()
 
-artifact = SourceArtifact(
-    path=Path("data/raw/archives_cache/2004q1_ascii.zip"),
-    release="2004Q1"
-)
+artifact = SourceArtifact(path=Path("data/raw/faers_ascii_2024q1.zip"), release="2024Q1")
 
 result = adapter.extract_and_load(con, artifact)
 print(f"Extracted {result.row_counts['demo']} reports under signature {result.signature_id}")
 ```
 
----
+### 3. Stream & Parse Raw $-Delimited ASCII Files
+```python
+from raxtik_source_faers import parse_faers_ascii_file
 
-## 🧪 Testing
-
-```bash
-pytest tests/ -v
+for record in parse_faers_ascii_file("DEMO24Q1.txt", table_type="demo"):
+    print(record["primaryid"], record["sex"], record["age"])
 ```
 
-Tests cover:
-- S1, S2, and S3 signature detection.
-- Fail-closed assertions on unrecognized schemas or missing tables.
-- End-to-end extraction into DuckDB and canonical table counts.
+---
+
+## 🧪 Testing & Quality
+
+```bash
+# Run test suite
+uv run --extra dev pytest tests/ -v
+
+# Run type checks
+uv run --extra dev pyrefly check src/ tests/
+uv run --extra dev mypy src/ tests/
+
+# Run linter
+uv run --extra dev ruff check .
+```
+
+---
+
+## 👥 Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/prateekdagar"><img src="https://avatars.githubusercontent.com/u/1041938?v=4" width="100px;" alt="Prateek Dagar"/><br /><sub><b>Prateek Dagar</b></sub></a><br /><a href="https://github.com/raxtik-org/raxtik-source-faers/commits?author=prateekdagar" title="Code">💻</a> <a href="https://github.com/raxtik-org/raxtik-source-faers/commits?author=prateekdagar" title="Documentation">📖</a> <a href="#infra-prateekdagar" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-prateekdagar" title="Maintenance">🚧</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ---
 

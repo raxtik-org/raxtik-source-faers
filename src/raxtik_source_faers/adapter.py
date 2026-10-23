@@ -158,7 +158,8 @@ class FAERSAdapter(SourceAdapter):
         row_counts = {}
         for tbl in ["demo", "drug", "reac", "outc", "indi", "ther", "rpsr"]:
             try:
-                cnt = con.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()[0]
+                res = con.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()
+                cnt = int(res[0]) if res is not None else 0
                 row_counts[tbl] = cnt
             except Exception:
                 row_counts[tbl] = 0
