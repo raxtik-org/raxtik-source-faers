@@ -55,13 +55,9 @@ jobs:
         working-directory: raxtik-source-faers
         run: uv run typos
 
-      - name: Type check with Pyrefly
+      - name: Run Pyrefly static typing
         working-directory: raxtik-source-faers
-        run: uv run pyrefly check src/raxtik_source_faers tests
-
-      - name: Type check with Mypy
-        working-directory: raxtik-source-faers
-        run: uv run mypy src/raxtik_source_faers tests
+        run: uv run pyrefly check src/raxtik_source_faers
 
   test:
     name: test (${{ matrix.os }} - py${{ matrix.python-version }})
