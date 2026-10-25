@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -66,7 +67,10 @@ def download_quarterly_archive(
     if quarter not in (1, 2, 3, 4):
         raise ValueError(f"Invalid quarter: {quarter}. Must be 1, 2, 3, or 4.")
 
-    out_dir = Path(dest_dir) if dest_dir else Path.cwd()
+    default_raw_cache = Path(
+        os.environ.get("FAERS_CACHE_DIR", Path.home() / ".cache" / "raxtik" / "raw_archives")
+    )
+    out_dir = Path(dest_dir) if dest_dir else default_raw_cache
     out_dir.mkdir(parents=True, exist_ok=True)
 
     candidates = [

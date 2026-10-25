@@ -31,6 +31,7 @@ dependencies = [
     "duckdb>=1.1.0",
     "raxtik-etl>=0.1.0.dev0",
     "requests>=2.31.0",
+    "certifi>=2026.10.19",
     "rich>=13.0.0",
     "tqdm>=4.66.0",
 ]
@@ -55,6 +56,9 @@ Issues = "https://github.com/raxtik-org/raxtik-source-faers/issues"
 
 [project.entry-points."raxtik_etl.sources"]
 faers = "raxtik_source_faers.adapter:FAERSAdapter"
+
+[project.entry-points."raxtik_etl.clients"]
+faers = "raxtik_source_faers:FAERS"
 
 [tool.uv.sources]
 raxtik-etl = { path = "../raxtik-etl", editable = true }
