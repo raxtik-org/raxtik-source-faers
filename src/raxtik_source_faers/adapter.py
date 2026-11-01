@@ -165,8 +165,11 @@ class FAERSAdapter(BaseSourceAdapter):
         raw_period = getattr(artifact, "data_period", None) or zip_path.name
         try:
             data_period = normalize_quarter(raw_period)
-        except ValueError:
-            data_period = "UNKNOWN"
+        except ValueError as err:
+            raise ValueError(
+                f"Cannot determine valid FAERS quarterly data_period from artifact or archive '{zip_path.name}'. "
+                "A quarterly format like '2004Q1' is required."
+            ) from err
 
         zip_sha256 = compute_sha256(zip_path)
 

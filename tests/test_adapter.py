@@ -73,6 +73,17 @@ def test_faers_adapter_missing_archive(tmp_path: Path):
     con.close()
 
 
+def test_faers_adapter_invalid_data_period(tmp_path: Path):
+    con = duckdb.connect()
+    adapter = FAERSAdapter()
+    dummy_zip = tmp_path / "non_quarterly_archive.zip"
+    dummy_zip.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    artifact = SourceArtifact(path=dummy_zip, data_period=None)
+    with pytest.raises(ValueError, match=r"Cannot determine valid FAERS quarterly data_period"):
+        adapter.extract_and_load(con, artifact)
+    con.close()
+
+
 @pytest.mark.parametrize(
     ("data_period", "expected_err"),
     [
