@@ -101,3 +101,152 @@ def test_faers_adapter_stubs_and_helpers(method_name: str, args: tuple, expected
     """Verify inherited BaseSourceAdapter stubs and helper methods on FAERSAdapter."""
     adapter = FAERSAdapter()
     assert expected_eval(getattr(adapter, method_name)(*args))
+
+
+def test_faers_case_resolution_ordering_rules():
+    con = duckdb.connect(":memory:")
+    adapter = FAERSAdapter()
+
+    con.execute("""
+        CREATE TABLE demo (
+            primary_id VARCHAR,
+            case_id VARCHAR,
+            canonical_case_version INTEGER,
+            latest_regulatory_date VARCHAR,
+            manufacturer_date VARCHAR,
+            event_date VARCHAR,
+            standard_age_years DOUBLE,
+            standard_sex_label VARCHAR,
+            initial_or_followup_code VARCHAR,
+            _data_period VARCHAR
+        );
+    """)
+
+    test_rows = [
+        ("101", "C1", 1, "20050101", "20041201", "20040101", 30.0, "Female", "I", "2004Q1"),
+        ("102", "C1", 2, "20040601", "20040501", "20040101", 30.0, "Female", "F", "2004Q2"),
+        ("201", "C2", 1, "20040101", "20031201", "20030101", 45.0, "Male", "I", "2004Q1"),
+        ("202", "C2", 1, "20040901", "20040801", "20030101", 45.0, "Male", "F", "2004Q3"),
+        ("301", "C3", 1, "20050101", "20041101", "20040101", 50.0, "Female", "I", "2005Q1"),
+        ("302", "C3", 1, "20050101", "20041215", "20040101", 50.0, "Female", "F", "2005Q1"),
+        ("401", "C4", 1, "20050101", "20041201", "20040101", 60.0, "Male", "I", "2005Q1"),
+        ("409", "C4", 1, "20050101", "20041201", "20040101", 60.0, "Male", "I", "2005Q1"),
+        ("501", "C5", None, "20060101", "20051201", "20050101", 65.0, "Female", "I", "2006Q1"),
+        ("502", "C5", 1, "20050101", "20041201", "20050101", 65.0, "Female", "F", "2005Q1"),
+        ("601", "C6", 1, None, None, "20050101", 70.0, "Male", "I", "2005Q1"),
+        ("602", "C6", 1, "20050601", "20050501", "20050101", 70.0, "Male", "F", "2005Q2"),
+    ]
+
+    con.executemany("INSERT INTO demo VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", test_rows)
+    con.execute(adapter.get_case_resolution_sql())
+
+    resolved = dict(
+        con.execute("SELECT case_id, primary_id FROM cases ORDER BY case_id").fetchall()
+    )
+    assert resolved["C1"] == "102"
+    assert resolved["C2"] == "202"
+    assert resolved["C3"] == "302"
+    assert resolved["C4"] == "409"
+    assert resolved["C5"] == "502"
+    assert resolved["C6"] == "602"
+    con.close()
+
+
+def test_analytical_summary_view_zero_cartesian_fanout():
+    con = duckdb.connect(":memory:")
+    adapter = FAERSAdapter()
+
+    con.execute("""
+        CREATE TABLE demo (
+            primary_id VARCHAR,
+            case_id VARCHAR,
+            canonical_case_version INTEGER,
+            latest_regulatory_date VARCHAR,
+            manufacturer_date VARCHAR,
+            event_date VARCHAR,
+            standard_age_years DOUBLE,
+            standard_sex_label VARCHAR,
+            _data_period VARCHAR
+        );
+        CREATE TABLE drug (
+            primary_id VARCHAR,
+            reported_drug_name VARCHAR,
+            structural_clean_drug_name VARCHAR,
+            role_code VARCHAR
+        );
+        CREATE TABLE reac (
+            primary_id VARCHAR,
+            reported_reaction_term VARCHAR
+        );
+        CREATE TABLE outc (
+            primary_id VARCHAR,
+            outcome_code VARCHAR
+        );
+        CREATE TABLE _code_outcomes (
+            code VARCHAR PRIMARY KEY,
+            label VARCHAR
+        );
+    """)
+
+    con.execute("""
+        INSERT INTO _code_outcomes VALUES
+        ('DE', 'Death'),
+        ('HO', 'Hospitalization - Initial or Prolonged');
+    """)
+
+    con.execute("""
+        INSERT INTO demo VALUES ('99901', 'CASE_MULTI', 1, '20200101', '20191201', '20191101', 55.0, 'Female', '2020Q1');
+    """)
+    con.execute("""
+        INSERT INTO drug VALUES
+        ('99901', 'ASPIRIN', 'ASPIRIN', 'PS'),
+        ('99901', 'WARFARIN', 'WARFARIN', 'PS'),
+        ('99901', 'METFORMIN', 'METFORMIN', 'C');
+    """)
+    con.execute("""
+        INSERT INTO reac VALUES
+        ('99901', 'GASTROINTESTINAL HAEMORRHAGE'),
+        ('99901', 'ANAEMIA'),
+        ('99901', 'HYPOTENSION');
+    """)
+    con.execute("""
+        INSERT INTO outc VALUES
+        ('99901', 'HO'),
+        ('99901', 'DE');
+    """)
+
+    con.execute(adapter.get_case_resolution_sql())
+    for _view_name, view_sql in adapter.get_summary_views_sql().items():
+        con.execute(view_sql)
+
+    summary_rows = con.execute("""
+        SELECT * FROM case_adverse_events_summary WHERE case_id = 'CASE_MULTI';
+    """).fetchall()
+
+    assert len(summary_rows) == 1
+
+    row = con.execute("""
+        SELECT
+            case_id,
+            primary_suspect_drugs,
+            reaction_terms,
+            reaction_count,
+            outcome_codes,
+            has_death,
+            has_hospitalization,
+            has_life_threatening
+        FROM case_adverse_events_summary
+        WHERE case_id = 'CASE_MULTI';
+    """).fetchone()
+
+    case_id, ps_drugs, reacs, reac_cnt, outc_codes, has_de, has_ho, has_lt = row
+    assert case_id == "CASE_MULTI"
+    assert set(ps_drugs) == {"ASPIRIN", "WARFARIN"}
+    assert "METFORMIN" not in ps_drugs
+    assert reac_cnt == 3
+    assert set(reacs) == {"GASTROINTESTINAL HAEMORRHAGE", "ANAEMIA", "HYPOTENSION"}
+    assert set(outc_codes) == {"HO", "DE"}
+    assert has_de is True
+    assert has_ho is True
+    assert has_lt is False
+    con.close()

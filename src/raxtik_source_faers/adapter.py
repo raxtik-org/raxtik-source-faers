@@ -161,18 +161,12 @@ class FAERSAdapter(BaseSourceAdapter):
         if not zip_path.exists():
             raise FileNotFoundError(f"FAERS source archive not found at {zip_path}")
 
-        # Derive data_period
-        data_period = getattr(artifact, "data_period", None)
-        if not data_period:
-            try:
-                data_period = normalize_quarter(zip_path.name)
-            except ValueError:
-                data_period = "UNKNOWN"
-        else:
-            try:
-                data_period = normalize_quarter(data_period)
-            except ValueError:
-                data_period = data_period.upper()
+        # Derive data_period from artifact or archive filename
+        raw_period = getattr(artifact, "data_period", None) or zip_path.name
+        try:
+            data_period = normalize_quarter(raw_period)
+        except ValueError:
+            data_period = "UNKNOWN"
 
         zip_sha256 = compute_sha256(zip_path)
 
