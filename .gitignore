@@ -25,9 +25,28 @@ venv/
 .coverage
 htmlcov/
 .ruff_cache/
+.mypy_cache/
+.tox/
 .DS_Store
 
 # uv lock & coverage
 uv.lock
 coverage.xml
 *.xml
+
+# Databases & Artifacts
+*.duckdb
+*.duckdb.wal
+
+# Local Python Environment & Scripts
+.python-version
+scripts/
+
+# IDE & Secrets
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+.env
+*.env

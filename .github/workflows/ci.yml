@@ -63,6 +63,8 @@ jobs:
     name: test (${{ matrix.os }} - py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     needs: quality
+    if: "!startsWith(github.head_ref, 'all-contributors/')"
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -110,5 +112,5 @@ jobs:
         with:
           files: raxtik-source-faers/coverage.xml
           flags: ${{ matrix.os }}-py${{ matrix.python-version }}
-          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+

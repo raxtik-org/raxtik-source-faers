@@ -2,16 +2,26 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import requests
-from tqdm import tqdm
+from raxtik_etl.sources import (
+    download_file,
+    find_files_by_entity,
+    format_quarter,
+    is_valid_quarter,
+    normalize_quarter,
+    parse_quarter,
+    stream_download,
+)
 
-from raxtik_source_faers.parser import detect_table_type
-
-FAERS_BASE_URL: str = "https://fis.fda.gov/content/Exports"
+from raxtik_source_faers.constants import (
+    DEFAULT_HTTP_TIMEOUT,
+    DEFAULT_RAW_CACHE_DIR,
+    FAERS_BASE_URL,
+    TABLE_PREFIX_TO_ENTITY,
+)
 
 
 def find_local_faers_files(directory: Union[Path, str]) -> Dict[str, List[Path]]:
@@ -21,33 +31,17 @@ def find_local_faers_files(directory: Union[Path, str]) -> Dict[str, List[Path]]
         Dict mapping canonical entity name ('demo', 'drug', 'reac', 'outc', 'indi', 'ther', 'rpsr')
         to a sorted list of Path objects.
     """
-    dir_path = Path(directory)
-    if not dir_path.exists():
-        return {}
-
-    categorized: Dict[str, List[Path]] = {
-        "demo": [],
-        "drug": [],
-        "reac": [],
-        "outc": [],
-        "indi": [],
-        "ther": [],
-        "rpsr": [],
-    }
-
-    for file_path in dir_path.rglob("*.txt"):
-        tbl_type = detect_table_type(file_path)
-        if tbl_type and tbl_type in categorized:
-            categorized[tbl_type].append(file_path)
-
-    return {k: sorted(v) for k, v in categorized.items() if v}
+    return find_files_by_entity(directory, TABLE_PREFIX_TO_ENTITY, pattern="*.txt")
 
 
 def download_quarterly_archive(
-    year: int,
-    quarter: int,
+    year: Optional[int] = None,
+    quarter: Optional[int] = None,
     dest_dir: Optional[Union[Path, str]] = None,
     overwrite: bool = False,
+    timeout: int = DEFAULT_HTTP_TIMEOUT,
+    *,
+    data_period: Optional[str] = None,
 ) -> Path:
     """Download official FDA FAERS/AERS ASCII zip archive for a given year & quarter.
 
@@ -56,21 +50,32 @@ def download_quarterly_archive(
     - legacy AERS: aers_ascii_YYYYqQ.zip / AERS_ASCII_YYYYQQ.zip
 
     Args:
-        year: Year (e.g. 2004, 2012, 2024).
-        quarter: Quarter integer (1, 2, 3, or 4).
-        dest_dir: Destination folder to store the zip (defaults to current working directory).
+        year: Year (e.g. 2004, 2012, 2024). Optional if data_period is provided.
+        quarter: Quarter integer (1, 2, 3, or 4). Optional if data_period is provided.
+        dest_dir: Destination folder to store the zip (defaults to cache directory).
         overwrite: Whether to re-download if the file already exists.
+        timeout: HTTP request timeout in seconds.
+        data_period: Optional quarterly period string (e.g. '2004Q1') as an alternative to year/quarter.
 
     Returns:
         Path to the downloaded .zip file.
+
+    Raises:
+        ValueError: If quarter is not 1, 2, 3, or 4, or arguments are missing.
+        RuntimeError: If remote archive cannot be found.
     """
+    if data_period is not None and (year is None or quarter is None):
+        parsed_year, parsed_quarter = parse_quarter(data_period)
+        year = year or parsed_year
+        quarter = quarter or parsed_quarter
+
+    if year is None or quarter is None:
+        raise ValueError("Must provide either (year, quarter) or data_period.")
+
     if quarter not in (1, 2, 3, 4):
         raise ValueError(f"Invalid quarter: {quarter}. Must be 1, 2, 3, or 4.")
 
-    default_raw_cache = Path(
-        os.environ.get("FAERS_CACHE_DIR", Path.home() / ".cache" / "raxtik" / "raw_archives")
-    )
-    out_dir = Path(dest_dir) if dest_dir else default_raw_cache
+    out_dir = Path(dest_dir) if dest_dir else DEFAULT_RAW_CACHE_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
 
     candidates = [
@@ -91,7 +96,7 @@ def download_quarterly_archive(
     for candidate in candidates:
         url = f"{FAERS_BASE_URL}/{candidate}"
         try:
-            resp = session.get(url, stream=True, timeout=30)
+            resp = session.get(url, stream=True, timeout=timeout)
             if resp.status_code == 200:
                 response = resp
                 selected_url = url
@@ -105,20 +110,18 @@ def download_quarterly_archive(
             f"Could not find FDA FAERS/AERS archive for {year}Q{quarter} at {FAERS_BASE_URL}"
         )
 
-    total_size = int(response.headers.get("content-length", 0))
-    with (
-        open(target_zip, "wb") as f,
-        tqdm(
-            desc=f"Downloading {target_zip.name}",
-            total=total_size,
-            unit="iB",
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as bar,
-    ):
-        for chunk in response.iter_content(chunk_size=1024 * 1024):
-            if chunk:
-                f.write(chunk)
-                bar.update(len(chunk))
-
+    stream_download(response, target_zip)
     return target_zip
+
+
+__all__ = [
+    "download_file",
+    "download_quarterly_archive",
+    "find_files_by_entity",
+    "find_local_faers_files",
+    "format_quarter",
+    "is_valid_quarter",
+    "normalize_quarter",
+    "parse_quarter",
+    "stream_download",
+]

@@ -8,20 +8,30 @@ from __future__ import annotations
 
 import re
 import zipfile
+from typing import Optional
 
 
-def detect_archive_signature(zf: zipfile.ZipFile, release: str) -> str:
+def detect_archive_signature(zf: zipfile.ZipFile, data_period: Optional[str] = None) -> str:
     """Detects whether an archive matches Signature S1, S2, or S3 using strict header inspection.
 
+    Args:
+        zf: Open ZipFile instance containing FAERS extract files.
+        data_period: Temporal quarter identifier (e.g. '2004Q1').
+
+    Returns:
+        Detected signature identifier ('S1', 'S2', or 'S3').
+
     Raises:
-        ValueError: If archive headers do not match any verified historical signature.
+        ValueError: If archive headers do not match any verified historical signature,
+            or if the DEMO table is missing.
     """
+    period = data_period or "UNKNOWN"
     file_list = zf.namelist()
     demo_files = [
         f for f in file_list if re.search(r"(?:^|[/\\])DEMO[^/\\]*\.txt$", f, re.IGNORECASE)
     ]
     if not demo_files:
-        raise ValueError(f"Invalid FAERS archive: No DEMO table found in {release}")
+        raise ValueError(f"Invalid FAERS archive: No DEMO table found in {period}")
 
     with zf.open(demo_files[0]) as f:
         header_sample = f.read(4096).decode("utf-8", errors="ignore")
@@ -48,7 +58,7 @@ def detect_archive_signature(zf: zipfile.ZipFile, release: str) -> str:
         return "S3"
 
     raise ValueError(
-        f"Unrecognized FDA ASCII schema signature for release {release}. "
+        f"Unrecognized FDA ASCII schema signature for data period {period}. "
         f"Detected DEMO columns: {columns[:10]}... "
         f"Ensure archive matches S1 (ISR), S2 (PRIMARYID+GNDR_COD), or S3 (PRIMARYID+SEX)."
     )

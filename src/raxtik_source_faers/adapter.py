@@ -7,17 +7,32 @@ Implements the raxtik_etl.sources.protocol.SourceAdapter protocol.
 
 from __future__ import annotations
 
-import hashlib
-import re
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import duckdb
-from raxtik_etl.sources.protocol import SourceAdapter, SourceArtifact, SourceLoadResult
+from raxtik_etl.packaging.builder import compute_sha256
+from raxtik_etl.sources import (
+    BaseSourceAdapter,
+    SourceArtifact,
+    SourceLoadResult,
+    normalize_quarter,
+)
 from rich.console import Console
 
+from raxtik_source_faers._version import __version__ as __source_version__
+from raxtik_source_faers.constants import (
+    CANONICAL_SCHEMA_VERSION,
+    CANONICAL_TABLES,
+    PROTOCOL_VERSION,
+    SOURCE_NAME,
+)
+from raxtik_source_faers.fetcher import (
+    download_quarterly_archive,
+    find_local_faers_files,
+)
 from raxtik_source_faers.mappings.s1_legacy import (
     load_s1_demo,
     load_s1_drug,
@@ -57,106 +72,133 @@ from raxtik_source_faers.signatures.resolver import detect_archive_signature
 
 console = Console()
 
-TABLE_PREFIXES = ["DEMO", "DRUG", "REAC", "OUTC", "RPSR", "THER", "INDI"]
+SIGNATURE_LOADERS = {
+    "S1": {
+        "demo": load_s1_demo,
+        "drug": load_s1_drug,
+        "reac": load_s1_reac,
+        "outc": load_s1_outc,
+        "indi": load_s1_indi,
+        "ther": load_s1_ther,
+        "rpsr": load_s1_rpsr,
+    },
+    "S2": {
+        "demo": load_s2_demo,
+        "drug": load_s2_drug,
+        "reac": load_s2_reac,
+        "outc": load_s2_outc,
+        "indi": load_s2_indi,
+        "ther": load_s2_ther,
+        "rpsr": load_s2_rpsr,
+    },
+    "S3": {
+        "demo": load_s3_demo,
+        "drug": load_s3_drug,
+        "reac": load_s3_reac,
+        "outc": load_s3_outc,
+        "indi": load_s3_indi,
+        "ther": load_s3_ther,
+        "rpsr": load_s3_rpsr,
+    },
+}
 
 
-class FAERSAdapter(SourceAdapter):
+class FAERSAdapter(BaseSourceAdapter):
     """Source adapter for FDA FAERS quarterly ASCII extracts."""
 
-    source_name: str = "faers"
+    source_name: str = SOURCE_NAME
+    source_version: str = __source_version__
+    etl_version: str = __source_version__
+    supported_schema_versions: List[str] = [CANONICAL_SCHEMA_VERSION]
+    protocol_version: str = PROTOCOL_VERSION
+
+    def fetch_archive(
+        self,
+        data_period: str,
+        dest_dir: Path,
+    ) -> Path:
+        """Downloads official FDA FAERS/AERS ASCII zip archive for data_period.
+
+        Args:
+            data_period: Quarterly period identifier (e.g. '2004Q1').
+            dest_dir: Destination folder to download archive into.
+
+        Returns:
+            Path to downloaded raw .zip archive.
+
+        Raises:
+            ValueError: If data_period format is invalid.
+        """
+        if not data_period:
+            raise ValueError("Must provide data_period (e.g. '2004Q1')")
+        if dest_dir is None:
+            raise ValueError("Must provide dest_dir")
+
+        try:
+            canonical_period = normalize_quarter(data_period)
+        except ValueError:
+            raise ValueError(
+                f"Invalid data_period format for FAERS: '{data_period}'. Expected format like '2004Q1'."
+            )
+        return download_quarterly_archive(data_period=canonical_period, dest_dir=dest_dir)
 
     def extract_and_load(
         self, con: duckdb.DuckDBPyConnection, artifact: SourceArtifact
     ) -> SourceLoadResult:
-        """Extracts text files from ZIP into DuckDB staging tables and normalizes to canonical schemas."""
+        """Extracts text files from ZIP into DuckDB staging tables and normalizes to canonical schemas.
+
+        Args:
+            con: Active DuckDB database connection.
+            artifact: SourceArtifact describing path and data period.
+
+        Returns:
+            SourceLoadResult containing row counts, reference tables, and metadata.
+
+        Raises:
+            FileNotFoundError: If source zip does not exist.
+        """
         zip_path = artifact.path
         if not zip_path.exists():
             raise FileNotFoundError(f"FAERS source archive not found at {zip_path}")
 
-        # Derive release if not provided
-        release = artifact.release
-        if not release:
-            match = re.search(r"(\d{4}q[1-4])", zip_path.name, re.IGNORECASE)
-            release = match.group(1).upper() if match else "UNKNOWN"
+        # Derive data_period
+        data_period = getattr(artifact, "data_period", None)
+        if not data_period:
+            try:
+                data_period = normalize_quarter(zip_path.name)
+            except ValueError:
+                data_period = "UNKNOWN"
         else:
-            release = release.upper()
+            try:
+                data_period = normalize_quarter(data_period)
+            except ValueError:
+                data_period = data_period.upper()
 
-        zip_bytes = zip_path.read_bytes()
-        zip_sha256 = hashlib.sha256(zip_bytes).hexdigest()
+        zip_sha256 = compute_sha256(zip_path)
 
         with zipfile.ZipFile(zip_path, "r") as zf:
-            signature_id = detect_archive_signature(zf, release)
+            signature_id = detect_archive_signature(zf, data_period)
             console.print(
-                f"[cyan]Detected Schema Signature for {release}:[/cyan] [bold]{signature_id}[/bold]"
+                f"[cyan]Detected Schema Signature for {data_period}:[/cyan] [bold]{signature_id}[/bold]"
             )
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmp_path = Path(tmpdir)
                 zf.extractall(tmp_path)
 
-                extracted_files = [
-                    f for f in tmp_path.rglob("*") if f.is_file() and f.suffix.lower() == ".txt"
-                ]
-                table_files: Dict[str, Path] = {}
-                for prefix in TABLE_PREFIXES:
-                    matches = [
-                        f
-                        for f in extracted_files
-                        if re.search(rf"(?:^|[/\\]){prefix}[^/\\]*\.txt$", f.name, re.IGNORECASE)
-                    ]
-                    if matches:
-                        table_files[prefix.lower()] = matches[0]
+                local_tables = find_local_faers_files(tmp_path)
+                table_files: Dict[str, Path] = {
+                    tbl: paths[0] for tbl, paths in local_tables.items() if paths
+                }
 
-                if signature_id == "S1":
-                    if "demo" in table_files:
-                        load_s1_demo(con, table_files["demo"], release)
-                    if "drug" in table_files:
-                        load_s1_drug(con, table_files["drug"], release)
-                    if "reac" in table_files:
-                        load_s1_reac(con, table_files["reac"], release)
-                    if "outc" in table_files:
-                        load_s1_outc(con, table_files["outc"], release)
-                    if "indi" in table_files:
-                        load_s1_indi(con, table_files["indi"], release)
-                    if "ther" in table_files:
-                        load_s1_ther(con, table_files["ther"], release)
-                    if "rpsr" in table_files:
-                        load_s1_rpsr(con, table_files["rpsr"], release)
-
-                elif signature_id == "S2":
-                    if "demo" in table_files:
-                        load_s2_demo(con, table_files["demo"], release)
-                    if "drug" in table_files:
-                        load_s2_drug(con, table_files["drug"], release)
-                    if "reac" in table_files:
-                        load_s2_reac(con, table_files["reac"], release)
-                    if "outc" in table_files:
-                        load_s2_outc(con, table_files["outc"], release)
-                    if "indi" in table_files:
-                        load_s2_indi(con, table_files["indi"], release)
-                    if "ther" in table_files:
-                        load_s2_ther(con, table_files["ther"], release)
-                    if "rpsr" in table_files:
-                        load_s2_rpsr(con, table_files["rpsr"], release)
-
-                elif signature_id == "S3":
-                    if "demo" in table_files:
-                        load_s3_demo(con, table_files["demo"], release)
-                    if "drug" in table_files:
-                        load_s3_drug(con, table_files["drug"], release)
-                    if "reac" in table_files:
-                        load_s3_reac(con, table_files["reac"], release)
-                    if "outc" in table_files:
-                        load_s3_outc(con, table_files["outc"], release)
-                    if "indi" in table_files:
-                        load_s3_indi(con, table_files["indi"], release)
-                    if "ther" in table_files:
-                        load_s3_ther(con, table_files["ther"], release)
-                    if "rpsr" in table_files:
-                        load_s3_rpsr(con, table_files["rpsr"], release)
+                loaders = SIGNATURE_LOADERS.get(signature_id, {})
+                for tbl_name, file_path in table_files.items():
+                    loader_fn = loaders.get(tbl_name)
+                    if loader_fn:
+                        loader_fn(con, file_path, data_period)
 
         row_counts = {}
-        for tbl in ["demo", "drug", "reac", "outc", "indi", "ther", "rpsr"]:
+        for tbl in CANONICAL_TABLES:
             try:
                 res = con.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()
                 cnt = int(res[0]) if res is not None else 0
@@ -185,7 +227,7 @@ class FAERSAdapter(SourceAdapter):
 
         return SourceLoadResult(
             source_name=self.source_name,
-            release=release,
+            data_period=data_period,
             signature_id=signature_id,
             source_files=source_files,
             reference_tables=reference_tables,
@@ -194,3 +236,117 @@ class FAERSAdapter(SourceAdapter):
                 "source_data_license": "US Government Work / Public Domain (17 U.S.C. § 105)"
             },
         )
+
+    def get_case_resolution_sql(self) -> str:
+        """Returns SQL creating the deterministic deduplicated 'cases' view for FAERS.
+
+        Returns:
+            CREATE OR REPLACE VIEW SQL statement string.
+        """
+        return """
+        CREATE OR REPLACE VIEW cases AS
+        WITH ranked_reports AS (
+            SELECT
+                *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY case_id
+                    ORDER BY
+                        canonical_case_version DESC,
+                        TRY_CAST(latest_regulatory_date AS BIGINT) DESC NULLS LAST,
+                        TRY_CAST(manufacturer_date AS BIGINT) DESC NULLS LAST,
+                        TRY_CAST(primary_id AS BIGINT) DESC
+                ) AS _rn
+            FROM demo
+        )
+        SELECT * EXCLUDE (_rn)
+        FROM ranked_reports
+        WHERE _rn = 1;
+        """
+
+    def get_case_lineage_sql(self) -> str:
+        """Returns SQL creating the 'case_lineage' table tracking cross-quarter submission history for FAERS.
+
+        Returns:
+            CREATE OR REPLACE TABLE SQL statement string.
+        """
+        return """
+        CREATE OR REPLACE TABLE case_lineage AS
+        SELECT
+            case_id,
+            COUNT(DISTINCT primary_id) AS total_submissions_count,
+            COUNT(DISTINCT _data_period) AS quarters_count,
+            MIN(_data_period) AS first_data_period,
+            MAX(_data_period) AS latest_data_period,
+            MIN(TRY_CAST(latest_regulatory_date AS BIGINT)) AS first_regulatory_date,
+            MAX(TRY_CAST(latest_regulatory_date AS BIGINT)) AS latest_regulatory_date,
+            MIN(canonical_case_version) AS min_case_version,
+            MAX(canonical_case_version) AS max_case_version,
+            BOOL_OR(initial_or_followup_code = 'F') AS has_followup,
+            (COUNT(DISTINCT _data_period) > 1) AS is_cross_quarter_case,
+            FIRST(primary_id ORDER BY canonical_case_version ASC, TRY_CAST(latest_regulatory_date AS BIGINT) ASC, TRY_CAST(primary_id AS BIGINT) ASC) AS initial_primary_id,
+            FIRST(primary_id ORDER BY canonical_case_version DESC, TRY_CAST(latest_regulatory_date AS BIGINT) DESC, TRY_CAST(primary_id AS BIGINT) DESC) AS latest_primary_id
+        FROM demo
+        GROUP BY case_id;
+        """
+
+    def get_summary_views_sql(self) -> Dict[str, str]:
+        """Returns analytical summary views for FAERS with pre-aggregated non-fanout arrays.
+
+        Returns:
+            Mapping of view name to SQL CREATE OR REPLACE VIEW statement.
+        """
+        return {
+            "case_adverse_events_summary": """
+            CREATE OR REPLACE VIEW case_adverse_events_summary AS
+            WITH drug_agg AS (
+                SELECT
+                    primary_id,
+                    LIST(reported_drug_name) AS primary_suspect_drugs,
+                    FIRST(reported_drug_name) AS primary_suspect_drug
+                FROM drug
+                WHERE role_code = 'PS'
+                GROUP BY primary_id
+            ),
+            reac_agg AS (
+                SELECT
+                    primary_id,
+                    LIST(reported_reaction_term) AS reaction_terms,
+                    COUNT(DISTINCT reported_reaction_term) AS reaction_count
+                FROM reac
+                GROUP BY primary_id
+            ),
+            outc_agg AS (
+                SELECT
+                    o.primary_id,
+                    LIST(o.outcome_code) AS outcome_codes,
+                    LIST(co.label) AS outcome_labels,
+                    BOOL_OR(o.outcome_code = 'DE') AS has_death,
+                    BOOL_OR(o.outcome_code = 'LT') AS has_life_threatening,
+                    BOOL_OR(o.outcome_code = 'HO') AS has_hospitalization
+                FROM outc o
+                LEFT JOIN _code_outcomes co ON o.outcome_code = co.code
+                GROUP BY o.primary_id
+            )
+            SELECT
+                c.case_id,
+                c.primary_id,
+                c.canonical_case_version,
+                c.event_date,
+                c.standard_age_years,
+                c.standard_sex_label,
+                c._data_period,
+                COALESCE(d.primary_suspect_drugs, []) AS primary_suspect_drugs,
+                d.primary_suspect_drug,
+                COALESCE(r.reaction_terms, []) AS reaction_terms,
+                COALESCE(r.reaction_count, 0) AS reaction_count,
+                COALESCE(o.outcome_codes, []) AS outcome_codes,
+                COALESCE(o.outcome_labels, []) AS outcome_labels,
+                COALESCE(o.has_death, FALSE) AS has_death,
+                COALESCE(o.has_life_threatening, FALSE) AS has_life_threatening,
+                COALESCE(o.has_hospitalization, FALSE) AS has_hospitalization
+            FROM cases c
+            LEFT JOIN drug_agg d ON c.primary_id = d.primary_id
+            LEFT JOIN reac_agg r ON c.primary_id = r.primary_id
+            LEFT JOIN outc_agg o ON c.primary_id = o.primary_id;
+            """
+        }

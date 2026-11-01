@@ -26,13 +26,18 @@ from pathlib import Path
 import duckdb
 from raxtik_etl.transformations.normalization import (
     get_standard_age_sql,
-    get_standard_duration_days_sql,
     get_standard_sex_label_sql,
     get_standard_weight_sql,
 )
 
+from raxtik_source_faers.mappings.common import (
+    load_standard_indi,
+    load_standard_rpsr,
+    load_standard_ther,
+)
 
-def load_s2_demo(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+
+def load_s2_demo(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 DEMO file into canonical demo table."""
     age_sql = get_standard_age_sql("age", "age_cod")
     wt_sql = get_standard_weight_sql("wt", "wt_cod")
@@ -43,15 +48,15 @@ def load_s2_demo(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
         SELECT
             CAST(primaryid AS VARCHAR) AS primary_id,
             CAST(caseid AS VARCHAR) AS case_id,
-            TRY_CAST(caseversion AS INTEGER) AS fda_case_version,
+            TRY_CAST(caseversion AS INTEGER) AS source_case_version,
             COALESCE(TRY_CAST(caseversion AS INTEGER), 1) AS canonical_case_version,
             'FDA_REPORTED' AS case_version_source,
             CAST(NULL AS VARCHAR) AS foll_seq,
             CAST(i_f_code AS VARCHAR) AS initial_or_followup_code,
             CAST(event_dt AS VARCHAR) AS event_date,
             CAST(mfr_dt AS VARCHAR) AS manufacturer_date,
-            CAST(init_fda_dt AS VARCHAR) AS initial_fda_date,
-            CAST(fda_dt AS VARCHAR) AS fda_date,
+            CAST(init_fda_dt AS VARCHAR) AS initial_regulatory_date,
+            CAST(fda_dt AS VARCHAR) AS latest_regulatory_date,
             CAST(rept_dt AS VARCHAR) AS report_date,
             CAST(rept_cod AS VARCHAR) AS report_code,
             CAST(e_sub AS VARCHAR) AS electronic_submission_flag,
@@ -73,7 +78,7 @@ def load_s2_demo(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
             {sex_label_sql} AS standard_sex_label,
             {wt_sql} AS standard_weight_kg,
             'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
+            '{data_period}' AS _data_period,
             '{file_path.name}' AS _source_file,
             'S2' AS _source_signature_id,
             CURRENT_TIMESTAMP AS _ingested_at
@@ -81,7 +86,7 @@ def load_s2_demo(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
     """)
 
 
-def load_s2_drug(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+def load_s2_drug(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 DRUG file into canonical drug table."""
     con.execute(f"""
         CREATE OR REPLACE TABLE drug AS
@@ -105,14 +110,14 @@ def load_s2_drug(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
             CAST(rechal AS VARCHAR) AS rechallenge_code,
             CAST(COALESCE(COLUMNS('^lot_nbr$|^lot_num$'), NULL) AS VARCHAR) AS lot_number,
             CAST(exp_dt AS VARCHAR) AS expiration_date,
-            CAST(nda_num AS VARCHAR) AS nda_num,
+            CAST(nda_num AS VARCHAR) AS regulatory_auth_num,
             TRIM(UPPER(CAST(drugname AS VARCHAR))) AS structural_clean_drug_name,
             CAST(NULL AS VARCHAR) AS standard_concept_name,
             CAST(NULL AS VARCHAR) AS standard_concept_source,
             CAST(NULL AS VARCHAR) AS rxcui,
             'NOT_ATTEMPTED' AS derivation_status,
             'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
+            '{data_period}' AS _data_period,
             '{file_path.name}' AS _source_file,
             'S2' AS _source_signature_id,
             CURRENT_TIMESTAMP AS _ingested_at
@@ -120,7 +125,7 @@ def load_s2_drug(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
     """)
 
 
-def load_s2_reac(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+def load_s2_reac(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 REAC file into canonical reac table."""
     con.execute(f"""
         CREATE OR REPLACE TABLE reac AS
@@ -131,7 +136,7 @@ def load_s2_reac(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
             ROW_NUMBER() OVER (PARTITION BY primaryid) AS reaction_seq,
             CAST(NULL AS VARCHAR) AS drug_reaction_action,
             'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
+            '{data_period}' AS _data_period,
             '{file_path.name}' AS _source_file,
             'S2' AS _source_signature_id,
             CURRENT_TIMESTAMP AS _ingested_at
@@ -139,7 +144,7 @@ def load_s2_reac(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
     """)
 
 
-def load_s2_outc(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+def load_s2_outc(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 OUTC file into canonical outc table."""
     con.execute(f"""
         CREATE OR REPLACE TABLE outc AS
@@ -148,7 +153,7 @@ def load_s2_outc(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
             CAST(caseid AS VARCHAR) AS case_id,
             CAST(COALESCE(COLUMNS('^outc_code$|^outc_cod$'), NULL) AS VARCHAR) AS outcome_code,
             'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
+            '{data_period}' AS _data_period,
             '{file_path.name}' AS _source_file,
             'S2' AS _source_signature_id,
             CURRENT_TIMESTAMP AS _ingested_at
@@ -156,59 +161,16 @@ def load_s2_outc(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
     """)
 
 
-def load_s2_indi(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+def load_s2_indi(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 INDI file into canonical indi table."""
-    con.execute(f"""
-        CREATE OR REPLACE TABLE indi AS
-        SELECT
-            CAST(primaryid AS VARCHAR) AS primary_id,
-            CAST(caseid AS VARCHAR) AS case_id,
-            COALESCE(TRY_CAST(indi_drug_seq AS INTEGER), 1) AS indication_drug_seq,
-            CAST(indi_pt AS VARCHAR) AS reported_indication_term,
-            'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
-            '{file_path.name}' AS _source_file,
-            'S2' AS _source_signature_id,
-            CURRENT_TIMESTAMP AS _ingested_at
-        FROM read_csv('{file_path.as_posix()}', delim='$', header=True, all_varchar=True, quote='', escape='', ignore_errors=true, null_padding=true);
-    """)
+    load_standard_indi(con, file_path, data_period, signature_id="S2")
 
 
-def load_s2_ther(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+def load_s2_ther(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 THER file into canonical ther table."""
-    dur_sql = get_standard_duration_days_sql("dur", "dur_cod")
-    con.execute(f"""
-        CREATE OR REPLACE TABLE ther AS
-        SELECT
-            CAST(primaryid AS VARCHAR) AS primary_id,
-            CAST(caseid AS VARCHAR) AS case_id,
-            COALESCE(TRY_CAST(dsg_drug_seq AS INTEGER), 1) AS therapy_drug_seq,
-            CAST(start_dt AS VARCHAR) AS start_date,
-            CAST(end_dt AS VARCHAR) AS end_date,
-            TRY_CAST(dur AS DOUBLE) AS reported_duration,
-            CAST(dur_cod AS VARCHAR) AS reported_duration_code,
-            {dur_sql} AS standard_duration_days,
-            'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
-            '{file_path.name}' AS _source_file,
-            'S2' AS _source_signature_id,
-            CURRENT_TIMESTAMP AS _ingested_at
-        FROM read_csv('{file_path.as_posix()}', delim='$', header=True, all_varchar=True, quote='', escape='', ignore_errors=true, null_padding=true);
-    """)
+    load_standard_ther(con, file_path, data_period, signature_id="S2")
 
 
-def load_s2_rpsr(con: duckdb.DuckDBPyConnection, file_path: Path, release: str):
+def load_s2_rpsr(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S2 RPSR file into canonical rpsr table."""
-    con.execute(f"""
-        CREATE OR REPLACE TABLE rpsr AS
-        SELECT
-            CAST(primaryid AS VARCHAR) AS primary_id,
-            CAST(caseid AS VARCHAR) AS case_id,
-            CAST(rpsr_cod AS VARCHAR) AS report_source_code,
-            'FDA_FAERS_ASCII' AS _source_system,
-            '{release}' AS _source_release,
-            '{file_path.name}' AS _source_file,
-            'S2' AS _source_signature_id,
-            CURRENT_TIMESTAMP AS _ingested_at
-        FROM read_csv('{file_path.as_posix()}', delim='$', header=True, all_varchar=True, quote='', escape='', ignore_errors=true, null_padding=true);
-    """)
+    load_standard_rpsr(con, file_path, data_period, signature_id="S2")
