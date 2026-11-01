@@ -37,9 +37,13 @@ from raxtik_source_faers.parser import (
     detect_table_type,
     parse_faers_ascii_file,
 )
-from raxtik_source_faers.signatures.resolver import detect_archive_signature
+from raxtik_source_faers.signatures.resolver import (
+    ArchiveSignature,
+    detect_archive_signature,
+)
 
 __all__ = [
+    "ArchiveSignature",
     "FAERS",
     "FAERSAdapter",
     "PackageFormat",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -78,16 +79,28 @@ def download_quarterly_archive(
     out_dir = Path(dest_dir) if dest_dir else DEFAULT_RAW_CACHE_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    candidates = [
-        f"faers_ascii_{year}q{quarter}.zip",
-        f"FAERS_ASCII_{year}Q{quarter}.zip",
-        f"aers_ascii_{year}q{quarter}.zip",
-        f"AERS_ASCII_{year}Q{quarter}.zip",
-    ]
+    # 1. Check local cache via case-insensitive regex matching any historical naming
+    archive_pattern = re.compile(rf"^(?:faers|aers)_ascii_{year}q{quarter}\.zip$", re.IGNORECASE)
+    if not overwrite:
+        for existing in out_dir.iterdir():
+            if (
+                existing.is_file()
+                and existing.stat().st_size > 0
+                and archive_pattern.match(existing.name)
+            ):
+                return existing
 
-    target_zip = out_dir / candidates[0]
-    if target_zip.exists() and not overwrite:
-        return target_zip
+    # 2. Prepare remote candidates ordered by temporal era to avoid wasted 404 network hops
+    is_modern = (year > 2012) or (year == 2012 and quarter >= 4)
+    primary_prefix = "faers" if is_modern else "aers"
+    alt_prefix = "aers" if is_modern else "faers"
+
+    candidates = [
+        f"{primary_prefix}_ascii_{year}q{quarter}.zip",
+        f"{primary_prefix.upper()}_ASCII_{year}Q{quarter}.zip",
+        f"{alt_prefix}_ascii_{year}q{quarter}.zip",
+        f"{alt_prefix.upper()}_ASCII_{year}Q{quarter}.zip",
+    ]
 
     session = requests.Session()
     response = None

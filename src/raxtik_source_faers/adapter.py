@@ -10,7 +10,7 @@ from __future__ import annotations
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Final, List, Set
 
 import duckdb
 from raxtik_etl.packaging.builder import compute_sha256
@@ -26,6 +26,7 @@ from raxtik_source_faers._version import __version__ as __source_version__
 from raxtik_source_faers.constants import (
     CANONICAL_SCHEMA_VERSION,
     CANONICAL_TABLES,
+    DEFAULT_RAW_CACHE_DIR,
     PROTOCOL_VERSION,
     SOURCE_NAME,
 )
@@ -71,6 +72,36 @@ from raxtik_source_faers.reference import (
 from raxtik_source_faers.signatures.resolver import detect_archive_signature
 
 console = Console()
+
+REQUIRED_TABLE_COLUMNS: Final[Dict[str, Dict[str, Set[str]]]] = {
+    "S1": {
+        "demo": {"isr", "case"},
+        "drug": {"isr", "drugname"},
+        "reac": {"isr", "pt"},
+        "outc": {"isr", "outc_cod"},
+        "rpsr": {"isr"},
+        "ther": {"isr"},
+        "indi": {"isr"},
+    },
+    "S2": {
+        "demo": {"primaryid", "caseid"},
+        "drug": {"primaryid", "drugname"},
+        "reac": {"primaryid", "pt"},
+        "outc": {"primaryid", "outc_cod"},
+        "rpsr": {"primaryid"},
+        "ther": {"primaryid"},
+        "indi": {"primaryid"},
+    },
+    "S3": {
+        "demo": {"primaryid", "caseid"},
+        "drug": {"primaryid", "drugname"},
+        "reac": {"primaryid", "pt"},
+        "outc": {"primaryid", "outc_cod"},
+        "rpsr": {"primaryid"},
+        "ther": {"primaryid"},
+        "indi": {"primaryid"},
+    },
+}
 
 SIGNATURE_LOADERS = {
     "S1": {
@@ -173,13 +204,16 @@ class FAERSAdapter(BaseSourceAdapter):
 
         zip_sha256 = compute_sha256(zip_path)
 
+        staging_dir = DEFAULT_RAW_CACHE_DIR.parent / "tmp"
+        staging_dir.mkdir(parents=True, exist_ok=True)
+
         with zipfile.ZipFile(zip_path, "r") as zf:
             signature_id = detect_archive_signature(zf, data_period)
             console.print(
                 f"[cyan]Detected Schema Signature for {data_period}:[/cyan] [bold]{signature_id}[/bold]"
             )
 
-            with tempfile.TemporaryDirectory() as tmpdir:
+            with tempfile.TemporaryDirectory(dir=staging_dir) as tmpdir:
                 tmp_path = Path(tmpdir)
                 zf.extractall(tmp_path)
 
@@ -189,7 +223,11 @@ class FAERSAdapter(BaseSourceAdapter):
                 }
 
                 loaders = SIGNATURE_LOADERS.get(signature_id, {})
+                sig_required = REQUIRED_TABLE_COLUMNS.get(str(signature_id), {})
                 for tbl_name, file_path in table_files.items():
+                    req_cols = sig_required.get(tbl_name)
+                    self.validate_extract_file(file_path, required_columns=req_cols, delimiter="$")
+
                     loader_fn = loaders.get(tbl_name)
                     if loader_fn:
                         loader_fn(con, file_path, data_period)
@@ -200,7 +238,15 @@ class FAERSAdapter(BaseSourceAdapter):
                 res = con.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()
                 cnt = int(res[0]) if res is not None else 0
                 row_counts[tbl] = cnt
-            except Exception:
+            except duckdb.CatalogException:
+                console.print(
+                    f"[dim yellow]Table '{tbl}' not present in DuckDB schema for {data_period}. Defaulting row count to 0.[/dim yellow]"
+                )
+                row_counts[tbl] = 0
+            except Exception as err:
+                console.print(
+                    f"[bold red]Unexpected error reading count for table '{tbl}':[/bold red] {err}"
+                )
                 row_counts[tbl] = 0
 
         source_files = [

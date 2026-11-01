@@ -113,4 +113,3 @@ jobs:
           files: raxtik-source-faers/coverage.xml
           flags: ${{ matrix.os }}-py${{ matrix.python-version }}
           fail_ci_if_error: false
-
