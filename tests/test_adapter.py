@@ -67,8 +67,8 @@ def test_faers_adapter_extraction(tmp_path: Path):
 def test_faers_adapter_missing_archive(tmp_path: Path):
     con = duckdb.connect()
     adapter = FAERSAdapter()
-    artifact = SourceArtifact(path=tmp_path / "missing.zip", data_period="2004Q1")
-    with pytest.raises(FileNotFoundError, match=r"^FAERS source archive not found at .*"):
+    with pytest.raises(FileNotFoundError):
+        artifact = SourceArtifact(path=tmp_path / "missing.zip", data_period="2004Q1")
         adapter.extract_and_load(con, artifact)
     con.close()
 

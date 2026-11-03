@@ -27,6 +27,7 @@ class FAERS(BaseDataset):
         hf_repo: Optional[str] = None,
         timeout: int = 120,
         revision: Optional[str] = None,
+        tier: str = "bronze",
     ):
         """Initializes a FAERS dataset client for a specific quarterly period.
 
@@ -52,6 +53,7 @@ class FAERS(BaseDataset):
             hf_repo=hf_repo,
             timeout=timeout,
             revision=revision,
+            tier=tier,
         )
 
     @property
@@ -72,6 +74,7 @@ class FAERS(BaseDataset):
         hf_repo: Optional[str] = None,
         timeout: int = 120,
         revision: Optional[str] = None,
+        tier: str = "bronze",
     ) -> FAERS:
         """Loads a FAERS package, automatically downloading from Hugging Face Hub if missing locally.
 
@@ -94,6 +97,7 @@ class FAERS(BaseDataset):
             hf_repo=hf_repo,
             timeout=timeout,
             revision=revision,
+            tier=tier,
         )
 
     @classmethod

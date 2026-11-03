@@ -189,9 +189,6 @@ class FAERSAdapter(BaseSourceAdapter):
             FileNotFoundError: If source zip does not exist.
         """
         zip_path = artifact.path
-        if not zip_path.exists():
-            raise FileNotFoundError(f"FAERS source archive not found at {zip_path}")
-
         # Derive data_period from artifact or archive filename
         raw_period = getattr(artifact, "data_period", None) or zip_path.name
         try:

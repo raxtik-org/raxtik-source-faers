@@ -38,17 +38,17 @@ class SignatureRule:
 
 # Declarative signature rules evaluated in priority order
 SIGNATURE_RULES: tuple[SignatureRule, ...] = (
-    # S1: Characterized by ISR as primary key and CASE as case key
+    # S1: Characterized by ISR as primary key and CASE as case key (2004Q1 - 2012Q3)
     SignatureRule(
         signature=ArchiveSignature.S1,
         required_columns=frozenset({"isr", "case"}),
     ),
-    # S2: Characterized by PRIMARYID, CASEID, CASEVERSION, and GNDR_COD
+    # S2: Characterized by PRIMARYID, CASEID, CASEVERSION, and GNDR_COD (2012Q4 - 2014Q2)
     SignatureRule(
         signature=ArchiveSignature.S2,
         required_columns=frozenset({"primaryid", "caseid", "gndr_cod"}),
     ),
-    # S3: Characterized by PRIMARYID, CASEID, and modern demographic fields (SEX, AGE_GRP, AUTH_NUM)
+    # S3: Modern FAERS & AEMS (2014Q3 - Present, including 2025/2026+)
     SignatureRule(
         signature=ArchiveSignature.S3,
         required_columns=frozenset({"primaryid", "caseid"}),
@@ -66,7 +66,7 @@ def detect_archive_signature(
 
     Args:
         zf: Open ZipFile instance containing FAERS extract files.
-        data_period: Temporal quarter identifier (e.g. '2004Q1').
+        data_period: Temporal quarter identifier (e.g. '2004Q1', '2025Q1').
         delimiter: Column delimiter used in extract files (default '$').
 
     Returns:
