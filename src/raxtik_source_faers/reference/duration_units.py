@@ -1,0 +1,18 @@
+"""Official FDA Therapy Duration Units (DUR_COD)."""
+
+from __future__ import annotations
+
+from typing import List
+
+from raxtik_etl.reference.codes import ReferenceCodeEntry
+
+FDA_DURATION_UNITS_REFERENCE: List[ReferenceCodeEntry] = [
+    ReferenceCodeEntry("YR", "Years", "Duration measured in years", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("MON", "Months", "Duration measured in months", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("WK", "Weeks", "Duration measured in weeks", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("DAY", "Days", "Duration measured in days", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("DY", "Days (Legacy)", "Legacy unit code for days", "FDA_CDER", "AERS_DOCUMENTATION", "1.0.0", "2004Q1", "2012Q3", False),
+    ReferenceCodeEntry("HR", "Hours", "Duration measured in hours", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("MIN", "Minutes", "Duration measured in minutes", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("SEC", "Seconds", "Duration measured in seconds", "FDA_CDER", "FAERS_QDE_ASC_NTS", "1.0.0", "2004Q1", None, True),
+]

@@ -9,9 +9,12 @@ from pathlib import Path
 
 import duckdb
 from raxtik_etl.transformations.normalization import (
+    get_age_unit_label_sql,
     get_date_precision_sql,
     get_dechallenge_label_sql,
+    get_drug_name_source_label_sql,
     get_drug_role_label_sql,
+    get_duration_unit_label_sql,
     get_initial_or_followup_label_sql,
     get_outcome_is_serious_sql,
     get_outcome_label_sql,
@@ -24,6 +27,7 @@ from raxtik_etl.transformations.normalization import (
     get_standard_duration_days_sql,
     get_standard_sex_label_sql,
     get_standard_weight_sql,
+    get_weight_unit_label_sql,
 )
 
 
@@ -35,6 +39,8 @@ def load_s1_demo(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
     if_label_sql = get_initial_or_followup_label_sql("I_F_COD")
     occp_label_sql = get_reporter_occupation_label_sql("OCCP_COD")
     rept_label_sql = get_report_type_label_sql("REPT_COD")
+    age_unit_lbl_sql = get_age_unit_label_sql("AGE_COD")
+    wt_unit_lbl_sql = get_weight_unit_label_sql("WT_COD")
 
     std_event_dt_sql = get_standard_date_sql("EVENT_DT")
     event_dt_prec_sql = get_date_precision_sql("EVENT_DT")
@@ -82,14 +88,11 @@ def load_s1_demo(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
             {death_dt_prec_sql} AS death_date_precision,
             CAST(CONFID AS VARCHAR) AS confidentiality_flag,
             CAST(REPT_COD AS VARCHAR) AS report_type_code,
-            CAST(REPT_COD AS VARCHAR) AS report_code,
             {rept_label_sql} AS report_type_label,
             CASE WHEN UPPER(TRIM(REPT_COD)) = 'EXP' THEN 'Y' ELSE 'N' END AS expedited_flag,
             CAST(E_SUB AS VARCHAR) AS electronic_submission_flag,
             CAST(MFR_NUM AS VARCHAR) AS manufacturer_control_number,
-            CAST(MFR_NUM AS VARCHAR) AS manufacturer_num,
             CAST(MFR_SNDR AS VARCHAR) AS manufacturer_name,
-            CAST(MFR_SNDR AS VARCHAR) AS manufacturer_sender,
             CAST(NULL AS VARCHAR) AS auth_num,
             CAST(NULL AS VARCHAR) AS lit_ref,
             CAST(TO_MFR AS VARCHAR) AS to_mfr,
@@ -97,11 +100,13 @@ def load_s1_demo(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
             CAST(NULL AS VARCHAR) AS sender_type_label,
             TRY_CAST(AGE AS DOUBLE) AS reported_age,
             CAST(AGE_COD AS VARCHAR) AS reported_age_code,
+            {age_unit_lbl_sql} AS reported_age_unit_label,
             CAST(NULL AS VARCHAR) AS age_group_code,
-            CAST(NULL AS VARCHAR) AS reported_age_group_code,
+            CAST(NULL AS VARCHAR) AS age_group_label,
             CAST(GNDR_COD AS VARCHAR) AS reported_sex_code,
             TRY_CAST(WT AS DOUBLE) AS reported_weight,
             CAST(WT_COD AS VARCHAR) AS reported_weight_code,
+            {wt_unit_lbl_sql} AS reported_weight_unit_label,
             CAST(OCCP_COD AS VARCHAR) AS reporter_occupation_code,
             {occp_label_sql} AS reporter_occupation_label,
             CAST(NULL AS VARCHAR) AS reporter_country,
@@ -121,6 +126,7 @@ def load_s1_demo(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
 def load_s1_drug(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S1 DRUG file into canonical drug table."""
     role_label_sql = get_drug_role_label_sql("d.ROLE_COD")
+    val_vbm_lbl_sql = get_drug_name_source_label_sql("d.VAL_VBM")
     dechal_lbl_sql = get_dechallenge_label_sql("d.DECHAL")
     rechal_lbl_sql = get_rechallenge_label_sql("d.RECHAL")
     std_exp_dt_sql = get_standard_date_sql("d.EXP_DT")
@@ -134,6 +140,7 @@ def load_s1_drug(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
             CAST(d.DRUGNAME AS VARCHAR) AS reported_drug_name,
             CAST(NULL AS VARCHAR) AS reported_active_ingredient,
             CAST(d.VAL_VBM AS VARCHAR) AS reported_validation_code,
+            {val_vbm_lbl_sql} AS reported_validation_label,
             CAST(d.ROLE_COD AS VARCHAR) AS role_code,
             {role_label_sql} AS role_label,
             CAST(d.ROUTE AS VARCHAR) AS route,
@@ -142,8 +149,10 @@ def load_s1_drug(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
             CAST(NULL AS VARCHAR) AS dose_unit,
             CAST(NULL AS VARCHAR) AS dose_form,
             CAST(NULL AS VARCHAR) AS dose_frequency,
+            CAST(NULL AS VARCHAR) AS dose_frequency_label,
             CAST(NULL AS VARCHAR) AS cumulative_dose_amount,
             CAST(NULL AS VARCHAR) AS cumulative_dose_unit,
+            CAST(NULL AS VARCHAR) AS cumulative_dose_unit_label,
             CAST(d.DECHAL AS VARCHAR) AS dechallenge_code,
             {dechal_lbl_sql} AS dechallenge_label,
             CAST(d.RECHAL AS VARCHAR) AS rechallenge_code,
@@ -232,6 +241,7 @@ def load_s1_indi(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
 def load_s1_ther(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: str):
     """Loads S1 THER file into canonical ther table."""
     dur_sql = get_standard_duration_days_sql("t.DUR", "t.DUR_COD")
+    dur_lbl_sql = get_duration_unit_label_sql("t.DUR_COD")
     std_start_dt_sql = get_standard_date_sql("t.START_DT")
     start_dt_prec_sql = get_date_precision_sql("t.START_DT")
     std_end_dt_sql = get_standard_date_sql("t.END_DT")
@@ -250,6 +260,7 @@ def load_s1_ther(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
             {end_dt_prec_sql} AS end_date_precision,
             TRY_CAST(t.DUR AS DOUBLE) AS reported_duration,
             CAST(t.DUR_COD AS VARCHAR) AS reported_duration_code,
+            {dur_lbl_sql} AS reported_duration_label,
             {dur_sql} AS standard_duration_days,
             'FDA_FAERS_ASCII' AS _source_system,
             '{data_period}' AS _data_period,

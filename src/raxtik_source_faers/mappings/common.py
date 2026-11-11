@@ -7,6 +7,7 @@ from pathlib import Path
 import duckdb
 from raxtik_etl.transformations.normalization import (
     get_date_precision_sql,
+    get_duration_unit_label_sql,
     get_report_source_label_sql,
     get_standard_date_sql,
     get_standard_duration_days_sql,
@@ -44,6 +45,7 @@ def load_standard_ther(
 ) -> None:
     """Loads standardized THER file into canonical ther table."""
     dur_sql = get_standard_duration_days_sql("dur", "dur_cod")
+    dur_lbl_sql = get_duration_unit_label_sql("dur_cod")
     std_start_dt_sql = get_standard_date_sql("start_dt")
     start_dt_prec_sql = get_date_precision_sql("start_dt")
     std_end_dt_sql = get_standard_date_sql("end_dt")
@@ -62,6 +64,7 @@ def load_standard_ther(
             {end_dt_prec_sql} AS end_date_precision,
             TRY_CAST(dur AS DOUBLE) AS reported_duration,
             CAST(dur_cod AS VARCHAR) AS reported_duration_code,
+            {dur_lbl_sql} AS reported_duration_label,
             {dur_sql} AS standard_duration_days,
             'FDA_FAERS_ASCII' AS _source_system,
             '{data_period}' AS _data_period,

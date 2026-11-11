@@ -62,12 +62,22 @@ from raxtik_source_faers.mappings.s3_modern import (
     load_s3_ther,
 )
 from raxtik_source_faers.reference import (
+    FDA_AGE_GROUPS_REFERENCE,
+    FDA_AGE_UNITS_REFERENCE,
+    FDA_CUMULATIVE_DOSE_UNITS_REFERENCE,
     FDA_DECHALLENGE_REFERENCE,
+    FDA_DOSE_FREQUENCIES_REFERENCE,
+    FDA_DRUG_NAME_SOURCES_REFERENCE,
+    FDA_DURATION_UNITS_REFERENCE,
     FDA_OCCUPATIONS_REFERENCE,
     FDA_OUTCOMES_REFERENCE,
     FDA_RECHALLENGE_REFERENCE,
     FDA_REPORT_SOURCES_REFERENCE,
+    FDA_REPORT_TYPES_REFERENCE,
     FDA_ROLES_REFERENCE,
+    FDA_SEX_REFERENCE,
+    FDA_WEIGHT_UNITS_REFERENCE,
+    ICH_ISO_COUNTRIES_REFERENCE,
 )
 from raxtik_source_faers.signatures.resolver import detect_archive_signature
 
@@ -263,6 +273,16 @@ class FAERSAdapter(BaseSourceAdapter):
             "_code_report_sources": FDA_REPORT_SOURCES_REFERENCE,
             "_code_dechallenge": FDA_DECHALLENGE_REFERENCE,
             "_code_rechallenge": FDA_RECHALLENGE_REFERENCE,
+            "_code_report_types": FDA_REPORT_TYPES_REFERENCE,
+            "_code_age_groups": FDA_AGE_GROUPS_REFERENCE,
+            "_code_age_units": FDA_AGE_UNITS_REFERENCE,
+            "_code_weight_units": FDA_WEIGHT_UNITS_REFERENCE,
+            "_code_sex": FDA_SEX_REFERENCE,
+            "_code_countries": ICH_ISO_COUNTRIES_REFERENCE,
+            "_code_drug_name_sources": FDA_DRUG_NAME_SOURCES_REFERENCE,
+            "_code_dose_frequencies": FDA_DOSE_FREQUENCIES_REFERENCE,
+            "_code_duration_units": FDA_DURATION_UNITS_REFERENCE,
+            "_code_cumulative_dose_units": FDA_CUMULATIVE_DOSE_UNITS_REFERENCE,
         }
 
         return SourceLoadResult(
