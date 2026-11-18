@@ -103,6 +103,7 @@ def download_quarterly_archive(
     ]
 
     session = requests.Session()
+    session.headers.update({"Accept-Encoding": "identity"})
     response = None
     selected_url = None
 
@@ -123,7 +124,7 @@ def download_quarterly_archive(
             f"Could not find FDA FAERS/AERS archive for {year}Q{quarter} at {FAERS_BASE_URL}"
         )
 
-    stream_download(response, target_zip)
+    stream_download(response, target_zip, url=selected_url, session=session, timeout=timeout)
     return target_zip
 
 

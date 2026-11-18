@@ -247,4 +247,22 @@ ICH_ISO_COUNTRIES_REFERENCE: List[ReferenceCodeEntry] = [
     ReferenceCodeEntry("YE", "Yemen", "Yemen per ISO 3166-1 alpha-2 and ICH ICSR Specification V2-3", "ISO_ICH", "ICH_ICSR_SPECIFICATION_V2_3", "1.0.0", "2004Q1", None, True),
     ReferenceCodeEntry("ZM", "Zambia", "Zambia per ISO 3166-1 alpha-2 and ICH ICSR Specification V2-3", "ISO_ICH", "ICH_ICSR_SPECIFICATION_V2_3", "1.0.0", "2004Q1", None, True),
     ReferenceCodeEntry("ZW", "Zimbabwe", "Zimbabwe per ISO 3166-1 alpha-2 and ICH ICSR Specification V2-3", "ISO_ICH", "ICH_ICSR_SPECIFICATION_V2_3", "1.0.0", "2004Q1", None, True),
+    # Modern ISO 3166-1 and FDA GENC additions
+    ReferenceCodeEntry("BL", "Saint Barthélemy", "Saint Barthélemy per ISO 3166-1 alpha-2 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2007Q1", None, True),
+    ReferenceCodeEntry("BQ", "Bonaire, Sint Eustatius and Saba", "Bonaire, Sint Eustatius and Saba per ISO 3166-1 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2010Q4", None, True),
+    ReferenceCodeEntry("CW", "Curaçao", "Curaçao per ISO 3166-1 alpha-2 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2010Q4", None, True),
+    ReferenceCodeEntry("GG", "Guernsey", "Guernsey (Channel Islands) per ISO 3166-1 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2006Q1", None, True),
+    ReferenceCodeEntry("IM", "Isle of Man", "Isle of Man per ISO 3166-1 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2006Q1", None, True),
+    ReferenceCodeEntry("JE", "Jersey", "Jersey (Channel Islands) per ISO 3166-1 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2006Q1", None, True),
+    ReferenceCodeEntry("MF", "Saint Martin (French part)", "Saint Martin (French part) per ISO 3166-1 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2007Q1", None, True),
+    ReferenceCodeEntry("SX", "Sint Maarten (Dutch part)", "Sint Maarten (Dutch part) per ISO 3166-1 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2010Q4", None, True),
+    ReferenceCodeEntry("SS", "South Sudan", "South Sudan per ISO 3166-1 alpha-2 and FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2011Q3", None, True),
+    ReferenceCodeEntry("XK", "Kosovo", "Kosovo per FDA GENC standard", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2021Q4", None, True),
+    ReferenceCodeEntry("EU", "European Union", "European Union regional entity per ICH ICSR E2B", "ICH_E2B", "ICH_ICSR_SPECIFICATION_V2_3", "1.0.0", "2004Q1", None, True),
+    ReferenceCodeEntry("XW", "Worldwide / International", "International / cross-border entities per FDA GENC", "FDA_GENC", "FDA_GENC_EDITION_3", "1.0.0", "2021Q4", None, True),
+    ReferenceCodeEntry("A1", "Anonymous Proxy / Unspecified", "Anonymous or regionally unspecified internet submission", "TELEMATICS", "FDA_E2B_GATEWAY", "1.0.0", "2004Q1", None, True),
+    # Historical ISO entities observed in early AERS/FAERS
+    ReferenceCodeEntry("CS", "Serbia and Montenegro", "Historical entity (dissolved 2006)", "ISO_HISTORICAL", "ISO_3166_1", "1.0.0", "2004Q1", "2006Q2", False),
+    ReferenceCodeEntry("YU", "Yugoslavia", "Historical entity", "ISO_HISTORICAL", "ISO_3166_1", "1.0.0", "2004Q1", "2003Q1", False),
+    ReferenceCodeEntry("ZR", "Zaire", "Historical entity (now Democratic Republic of the Congo)", "ISO_HISTORICAL", "ISO_3166_1", "1.0.0", "2004Q1", "1997Q1", False),
 ]
