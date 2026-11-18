@@ -180,7 +180,7 @@ def load_s2_drug(con: duckdb.DuckDBPyConnection, file_path: Path, data_period: s
             {dechal_lbl_sql} AS dechallenge_label,
             CAST(rechal AS VARCHAR) AS rechallenge_code,
             {rechal_lbl_sql} AS rechallenge_label,
-            # Regex column selector dynamically handles FDA schema fluctuation between 'lot_nbr' and 'lot_num'
+            -- Regex column selector dynamically handles FDA schema fluctuation between 'lot_nbr' and 'lot_num'
             CAST(COALESCE(COLUMNS('^lot_nbr$|^lot_num$'), NULL) AS VARCHAR) AS lot_number,
             CAST(exp_dt AS VARCHAR) AS expiration_date,
             {std_exp_dt_sql} AS standard_expiration_date,

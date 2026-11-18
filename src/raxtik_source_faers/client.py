@@ -56,15 +56,6 @@ class FAERS(BaseDataset):
             tier=tier,
         )
 
-    @property
-    def release(self) -> str:
-        """Backward-compatible alias for data_period.
-
-        Returns:
-            The temporal data period string.
-        """
-        return self.data_period
-
     @classmethod
     def from_hf(
         cls,
