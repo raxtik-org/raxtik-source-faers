@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -88,7 +89,10 @@ def download_quarterly_archive(
                 and existing.stat().st_size > 0
                 and archive_pattern.match(existing.name)
             ):
-                return existing
+                if zipfile.is_zipfile(existing):
+                    return existing
+                # Remove incomplete or corrupted archive from prior aborted downloads
+                existing.unlink(missing_ok=True)
 
     # 2. Prepare remote candidates ordered by temporal era to avoid wasted 404 network hops
     is_modern = (year > 2012) or (year == 2012 and quarter >= 4)
