@@ -50,3 +50,7 @@ scripts/
 *.swo
 .env
 *.env
+
+# Documentation builds
+docs/_build/
+_build/
