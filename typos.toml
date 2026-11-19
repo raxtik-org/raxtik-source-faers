@@ -30,6 +30,11 @@ auth = "auth"
 lit = "lit"
 confid = "confid"
 pyrefly = "pyrefly"
+quater = "quater"
+BA = "BA"
+FO = "FO"
+PN = "PN"
+Nam = "Nam"
 
 [files]
 extend-exclude = [

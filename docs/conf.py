@@ -7,6 +7,26 @@ from pathlib import Path
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
+# Mock runtime dependencies if not installed so Sphinx autodoc can run standalone
+from unittest.mock import MagicMock  # noqa: E402
+
+for mod_name in [
+    "duckdb",
+    "raxtik_etl",
+    "raxtik_etl.client",
+    "raxtik_etl.packaging",
+    "raxtik_etl.packaging.builder",
+    "raxtik_etl.schema",
+    "requests",
+    "certifi",
+    "rich",
+    "rich.console",
+    "rich.progress",
+    "rich.table",
+    "tqdm",
+]:
+    sys.modules.setdefault(mod_name, MagicMock())
+
 import raxtik_source_faers  # noqa: E402
 
 # Project information
@@ -88,4 +108,3 @@ autodoc_mock_imports = [
 ]
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
-
