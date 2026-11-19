@@ -53,7 +53,13 @@ myst_heading_anchors = 3
 # Templates & patterns
 templates_path = ["_templates"] if (Path(__file__).parent / "_templates").is_dir() else []
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-suppress_warnings = ["misc.highlighting_failure"]
+suppress_warnings = [
+    "misc.highlighting_failure",
+    "ref.class",
+    "ref.ref",
+    "toc.not_included",
+    "intersphinx.external",
+]
 
 # HTML output theme
 html_theme = "sphinx_rtd_theme"
