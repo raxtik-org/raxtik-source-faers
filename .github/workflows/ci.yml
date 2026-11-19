@@ -39,26 +39,37 @@ jobs:
       - name: Set up Python
         run: uv python install 3.13
 
-      - name: Install dependencies
+      - name: Run lint and type checking with tox-uv
         working-directory: raxtik-source-faers
-        run: |
-          uv venv --python 3.13
-          uv pip install -e ../raxtik-etl
-          uv pip install -e ".[dev]"
+        run: uvx --with tox-uv tox run -e quality
 
-      - name: Lint with Ruff
-        working-directory: raxtik-source-faers
-        run: |
-          uv run ruff check .
-          uv run ruff format --check .
+  docs:
+    name: 📖 Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout raxtik-source-faers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: raxtik-source-faers
 
-      - name: Check spelling with Typos
-        working-directory: raxtik-source-faers
-        run: uv run typos
+      - name: Checkout raxtik-etl
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: raxtik-org/raxtik-etl
+          path: raxtik-etl
 
-      - name: Run Pyrefly static typing
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Build documentation with tox-uv
         working-directory: raxtik-source-faers
-        run: uv run pyrefly check src/raxtik_source_faers
+        run: uvx --with tox-uv tox run -e docs
 
   packaging:
     name: 📦 Package Build & Validation
@@ -115,16 +126,9 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Run test suite with tox-uv
         working-directory: raxtik-source-faers
-        run: |
-          uv venv --python ${{ matrix.python-version }}
-          uv pip install -e ../raxtik-etl
-          uv pip install -e ".[dev]"
-
-      - name: Run Pytest with Coverage
-        working-directory: raxtik-source-faers
-        run: uv run pytest -v --cov=raxtik_source_faers --cov-report=xml --cov-report=term tests/
+        run: uvx --with tox-uv tox run -e py
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
