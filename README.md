@@ -48,9 +48,10 @@ The raw FDA ASCII files (`DEMO`, `DRUG`, `REAC`, `OUTC`, `INDI`, `THER`, `RPSR`)
 | **`rpsr`** | Report Sources | `(primary_id, rpsr_code)` | `primary_id` → `demo.primary_id` | Reporting channel: Health Professional (`HP`), Consumer (`CSM`), Study (`SDY`), etc. |
 | **`cases`** | Authoritative Deduplicated View | `case_id` | Derived from `demo` | Precomputed deterministic resolution to latest report version per `case_id`. |
 
-📖 **Interactive Visual ER Diagram**:
-- View the interactive rendered diagram on **[raxtik-etl Docs: Canonical Data Model](https://raxtik-etl.readthedocs.io/en/latest/schema/canonical_data_model.html)**.
-- View architecture specifications on **[raxtik-source-faers Docs](https://raxtik-source-faers.readthedocs.io/en/latest/architecture.html)**.
+📖 **Visual Entity-Relationship Diagram**:
+- 📊 **[Full Interactive ER Diagram (Mermaid)](ER_DIAGRAM.md)**
+- 🌐 **[raxtik-etl Docs: Canonical Data Model](https://raxtik-etl.readthedocs.io/en/latest/schema/canonical_data_model.html)**
+- 📚 **[raxtik-source-faers Architecture](https://raxtik-source-faers.readthedocs.io/en/latest/architecture.html)**
 
 ---
 
