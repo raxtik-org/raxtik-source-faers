@@ -28,6 +28,7 @@ class FAERS(BaseDataset):
         timeout: int = 120,
         revision: Optional[str] = None,
         tier: str = "bronze",
+        remote: bool = False,
     ):
         """Initializes a FAERS dataset client for a specific quarterly period.
 
@@ -39,6 +40,8 @@ class FAERS(BaseDataset):
             hf_repo: Optional custom Hugging Face repo identifier.
             timeout: HTTP request timeout in seconds.
             revision: Hugging Face Git revision or branch name.
+            tier: Dataset release tier ('bronze' or 'silver'). Defaults to 'bronze'.
+            remote: If True, streams directly from Hugging Face Hub over HTTPS with zero local disk footprint.
 
         Raises:
             ValueError: If data_period is not provided.
@@ -54,6 +57,7 @@ class FAERS(BaseDataset):
             timeout=timeout,
             revision=revision,
             tier=tier,
+            remote=remote,
         )
 
     @classmethod
@@ -66,6 +70,7 @@ class FAERS(BaseDataset):
         timeout: int = 120,
         revision: Optional[str] = None,
         tier: str = "bronze",
+        remote: bool = False,
     ) -> FAERS:
         """Loads a FAERS package, automatically downloading from Hugging Face Hub if missing locally.
 
@@ -76,6 +81,8 @@ class FAERS(BaseDataset):
             hf_repo: Optional custom Hugging Face repo identifier.
             timeout: HTTP request timeout in seconds.
             revision: Hugging Face Git revision or branch name.
+            tier: Dataset release tier ('bronze' or 'silver'). Defaults to 'bronze'.
+            remote: If True, streams directly from Hugging Face Hub over HTTPS with zero local disk footprint.
 
         Returns:
             Connected FAERS client instance.
@@ -84,11 +91,12 @@ class FAERS(BaseDataset):
             data_period=data_period,
             source=source,
             package_dir=package_dir,
-            download_if_missing=True,
+            download_if_missing=not remote,
             hf_repo=hf_repo,
             timeout=timeout,
             revision=revision,
             tier=tier,
+            remote=remote,
         )
 
     @classmethod
