@@ -410,3 +410,24 @@ class FAERSAdapter(BaseSourceAdapter):
             LEFT JOIN outc_agg o ON c.primary_id = o.primary_id;
             """
         }
+
+    def get_resolution_policy(self):
+        """Returns the FAERS-specific deterministic resolution policy for derived tier indexing.
+
+        Explicitly declares FAERS canonical entity/record keys (`case_id`, `primary_id`),
+        precedence columns (`canonical_case_version`, `latest_regulatory_date`,
+        `manufacturer_date`), numeric `primary_id` tie-breaker, and all 6 FAERS child tables.
+        """
+        from raxtik_etl.indexing.models import ResolutionPolicy
+
+        return ResolutionPolicy(
+            entity_key="case_id",
+            record_key="primary_id",
+            version_column="canonical_case_version",
+            regulatory_date_column="latest_regulatory_date",
+            manufacturer_date_column="manufacturer_date",
+            source_table="demo",
+            child_tables=("drug", "reac", "outc", "indi", "ther", "rpsr"),
+            numeric_record_key_tiebreaker=True,
+            policy_version="faers-1.0.0",
+        )

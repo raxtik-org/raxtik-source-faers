@@ -29,6 +29,9 @@ class FAERS(BaseDataset):
         revision: Optional[str] = None,
         tier: str = "bronze",
         remote: bool = False,
+        index_dir: Optional[Union[str, Path]] = None,
+        cache_index: bool = False,
+        as_of_period: Optional[str] = None,
     ):
         """Initializes a FAERS dataset client for a specific quarterly period.
 
@@ -40,8 +43,11 @@ class FAERS(BaseDataset):
             hf_repo: Optional custom Hugging Face repo identifier.
             timeout: HTTP request timeout in seconds.
             revision: Hugging Face Git revision or branch name.
-            tier: Dataset release tier ('bronze' or 'silver'). Defaults to 'bronze'.
+            tier: Dataset release tier ('bronze', 'silver', or future 'gold'). Defaults to 'bronze'.
             remote: If True, streams directly from Hugging Face Hub over HTTPS with zero local disk footprint.
+            index_dir: Optional local directory containing a pre-built tier index.
+            cache_index: When `remote=True` and `tier != 'bronze'`, caches the index locally.
+            as_of_period: Optional upper-bound period for time-bounded winner resolution.
 
         Raises:
             ValueError: If data_period is not provided.
@@ -58,6 +64,9 @@ class FAERS(BaseDataset):
             revision=revision,
             tier=tier,
             remote=remote,
+            index_dir=index_dir,
+            cache_index=cache_index,
+            as_of_period=as_of_period,
         )
 
     @classmethod
@@ -71,6 +80,9 @@ class FAERS(BaseDataset):
         revision: Optional[str] = None,
         tier: str = "bronze",
         remote: bool = False,
+        index_dir: Optional[Union[str, Path]] = None,
+        cache_index: bool = False,
+        as_of_period: Optional[str] = None,
     ) -> FAERS:
         """Loads a FAERS package, automatically downloading from Hugging Face Hub if missing locally.
 
@@ -81,8 +93,11 @@ class FAERS(BaseDataset):
             hf_repo: Optional custom Hugging Face repo identifier.
             timeout: HTTP request timeout in seconds.
             revision: Hugging Face Git revision or branch name.
-            tier: Dataset release tier ('bronze' or 'silver'). Defaults to 'bronze'.
+            tier: Dataset release tier ('bronze', 'silver', or future 'gold'). Defaults to 'bronze'.
             remote: If True, streams directly from Hugging Face Hub over HTTPS with zero local disk footprint.
+            index_dir: Optional local directory containing a pre-built tier index.
+            cache_index: When `remote=True` and `tier != 'bronze'`, caches the index locally.
+            as_of_period: Optional upper-bound period for time-bounded winner resolution.
 
         Returns:
             Connected FAERS client instance.
@@ -97,6 +112,9 @@ class FAERS(BaseDataset):
             revision=revision,
             tier=tier,
             remote=remote,
+            index_dir=index_dir,
+            cache_index=cache_index,
+            as_of_period=as_of_period,
         )
 
     @classmethod
