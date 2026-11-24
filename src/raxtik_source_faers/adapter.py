@@ -361,8 +361,8 @@ class FAERSAdapter(BaseSourceAdapter):
             WITH drug_agg AS (
                 SELECT
                     primary_id,
-                    LIST(reported_drug_name ORDER BY drug_seq) AS primary_suspect_drugs,
-                    FIRST(reported_drug_name ORDER BY drug_seq) AS primary_suspect_drug
+                    LIST(reported_drug_name ORDER BY TRY_CAST(drug_seq AS INTEGER) NULLS LAST, drug_seq) AS primary_suspect_drugs,
+                    FIRST(reported_drug_name ORDER BY TRY_CAST(drug_seq AS INTEGER) NULLS LAST, drug_seq) AS primary_suspect_drug
                 FROM drug
                 WHERE role_code = 'PS'
                 GROUP BY primary_id
