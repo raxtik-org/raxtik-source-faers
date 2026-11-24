@@ -361,8 +361,8 @@ class FAERSAdapter(BaseSourceAdapter):
             WITH drug_agg AS (
                 SELECT
                     primary_id,
-                    LIST(reported_drug_name) AS primary_suspect_drugs,
-                    FIRST(reported_drug_name) AS primary_suspect_drug
+                    LIST(reported_drug_name ORDER BY drug_seq) AS primary_suspect_drugs,
+                    FIRST(reported_drug_name ORDER BY drug_seq) AS primary_suspect_drug
                 FROM drug
                 WHERE role_code = 'PS'
                 GROUP BY primary_id
@@ -370,7 +370,7 @@ class FAERSAdapter(BaseSourceAdapter):
             reac_agg AS (
                 SELECT
                     primary_id,
-                    LIST(reported_reaction_term) AS reaction_terms,
+                    LIST(reported_reaction_term ORDER BY reported_reaction_term) AS reaction_terms,
                     COUNT(DISTINCT reported_reaction_term) AS reaction_count
                 FROM reac
                 GROUP BY primary_id
@@ -378,8 +378,8 @@ class FAERSAdapter(BaseSourceAdapter):
             outc_agg AS (
                 SELECT
                     o.primary_id,
-                    LIST(o.outcome_code) AS outcome_codes,
-                    LIST(co.label) AS outcome_labels,
+                    LIST(o.outcome_code ORDER BY o.outcome_code) AS outcome_codes,
+                    LIST(co.label ORDER BY o.outcome_code) AS outcome_labels,
                     BOOL_OR(o.outcome_code = 'DE') AS has_death,
                     BOOL_OR(o.outcome_code = 'LT') AS has_life_threatening,
                     BOOL_OR(o.outcome_code = 'HO') AS has_hospitalization

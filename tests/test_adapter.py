@@ -181,6 +181,7 @@ def test_analytical_summary_view_zero_cartesian_fanout():
         );
         CREATE TABLE drug (
             primary_id VARCHAR,
+            drug_seq INTEGER,
             reported_drug_name VARCHAR,
             structural_clean_drug_name VARCHAR,
             role_code VARCHAR
@@ -210,9 +211,9 @@ def test_analytical_summary_view_zero_cartesian_fanout():
     """)
     con.execute("""
         INSERT INTO drug VALUES
-        ('99901', 'ASPIRIN', 'ASPIRIN', 'PS'),
-        ('99901', 'WARFARIN', 'WARFARIN', 'PS'),
-        ('99901', 'METFORMIN', 'METFORMIN', 'C');
+        ('99901', 1, 'ASPIRIN', 'ASPIRIN', 'PS'),
+        ('99901', 2, 'WARFARIN', 'WARFARIN', 'PS'),
+        ('99901', 3, 'METFORMIN', 'METFORMIN', 'C');
     """)
     con.execute("""
         INSERT INTO reac VALUES
