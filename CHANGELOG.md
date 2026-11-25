@@ -5,7 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.1.0.dev1 - 2026-11-19
+## [0.1.0.dev2] - 2026-11-25
+
+**Full Changelog**: https://github.com/raxtik-org/raxtik-source-faers/compare/v0.1.0.dev1...v0.1.0.dev2
+
+### Added
+- Silver Tier index support in `FAERS` client (`tier="silver"`, `index_dir`, `cache_index`, `as_of_period`).
+- `get_resolution_policy()` hook on `FAERSAdapter` (`policy_version="faers-1.0.0"`) for cross-quarter case resolution.
+
+### Fixed
+- Deterministic numeric ordering (`TRY_CAST(drug_seq AS INTEGER) NULLS LAST, drug_seq`) in `case_adverse_events_summary` analytical view.
+
+### Changed
+- Updated minimum dependency to `raxtik-etl>=0.1.0.dev3`.
+
+## [0.1.0.dev1] - 2026-11-19
 
 **Full Changelog**: https://github.com/raxtik-org/raxtik-source-faers/commits/v0.1.0.dev1
 
