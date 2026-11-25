@@ -262,3 +262,35 @@ def test_analytical_summary_view_zero_cartesian_fanout():
     assert has_ho is True
     assert has_lt is False
     con.close()
+
+
+@pytest.mark.parametrize(
+    ("extra_files", "expected_missing"),
+    [
+        ({}, "['drug', 'reac']"),
+        ({"ascii/DRUG24Q1.txt": "primaryid$drugname\n1$ASPIRIN\n"}, "['reac']"),
+    ],
+)
+def test_missing_mandatory_tables(
+    tmp_path: Path, extra_files: dict[str, str], expected_missing: str
+) -> None:
+    """Archives missing mandatory tables (demo/drug/reac) fail closed."""
+    import zipfile
+
+    bad_zip = tmp_path / "faers_ascii_2024Q1.zip"
+    with zipfile.ZipFile(bad_zip, "w") as zf:
+        zf.writestr(
+            "ascii/DEMO24Q1.txt", "primaryid$caseid$caseversion$fda_dt$sex\n1$1$1$20240101$M\n"
+        )
+        for name, body in extra_files.items():
+            zf.writestr(name, body)
+
+    con = duckdb.connect(":memory:")
+    with pytest.raises(
+        ValueError,
+        match=f"missing mandatory table\\(s\\) {expected_missing}".replace("[", r"\[").replace(
+            "]", r"\]"
+        ),
+    ):
+        FAERSAdapter().extract_and_load(con, SourceArtifact(path=bad_zip, data_period="2024Q1"))
+    con.close()

@@ -113,6 +113,10 @@ REQUIRED_TABLE_COLUMNS: Final[Dict[str, Dict[str, Set[str]]]] = {
     },
 }
 
+# Mandatory tables required in every valid FDA FAERS/AERS quarterly archive.
+# Other canonical tables (outc, indi, ther, rpsr) are optional if absent from an archive.
+MANDATORY_TABLES: tuple[str, ...] = ("demo", "drug", "reac")
+
 SIGNATURE_LOADERS = {
     "S1": {
         "demo": load_s1_demo,
@@ -228,6 +232,14 @@ class FAERSAdapter(BaseSourceAdapter):
                 table_files: Dict[str, Path] = {
                     tbl: paths[0] for tbl, paths in local_tables.items() if paths
                 }
+
+                missing_mandatory = [t for t in MANDATORY_TABLES if t not in table_files]
+                if missing_mandatory:
+                    raise ValueError(
+                        f"Incomplete FAERS archive '{zip_path.name}' for {data_period}: "
+                        f"missing mandatory table(s) {missing_mandatory}. "
+                        f"Found: {sorted(table_files.keys())}"
+                    )
 
                 loaders = SIGNATURE_LOADERS.get(signature_id, {})
                 sig_required = REQUIRED_TABLE_COLUMNS.get(str(signature_id), {})
