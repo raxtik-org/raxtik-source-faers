@@ -84,6 +84,12 @@ with FAERS.from_hf("2024Q1") as faers:
 with FAERS.from_hf("2024Q1", remote=True) as faers:
     cases = faers.cases(limit=100)
     print(cases)
+
+# 3. Silver Tier (Cross-Quarter Deduplication + Case Timeline + Point-in-Time)
+with FAERS.from_hf("2024Q1", tier="silver", remote=True, as_of_period="2025Q4") as faers:
+    cases = faers.cases(limit=100)
+    timeline = faers.case_timeline(str(cases["case_id"][0]))
+    print(timeline)
 ```
 
 ### 2. Remote Querying via DuckDB (Zero Local Storage)
