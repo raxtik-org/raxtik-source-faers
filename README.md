@@ -153,7 +153,7 @@ from raxtik_source_faers import FAERSAdapter
 con = duckdb.connect("my_database.duckdb")
 adapter = FAERSAdapter()
 
-artifact = SourceArtifact(path=Path("data/raw/faers_ascii_2024q1.zip"), release="2024Q1")
+artifact = SourceArtifact(path=Path("data/raw/faers_ascii_2024q1.zip"), data_period="2024Q1")
 
 result = adapter.extract_and_load(con, artifact)
 print(f"Extracted {result.row_counts['demo']} reports under signature {result.signature_id}")
