@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, Final, List, Set
 
 import duckdb
+from raxtik_etl.indexing.models import ResolutionPolicy
 from raxtik_etl.packaging.builder import compute_sha256
 from raxtik_etl.sources import (
     BaseSourceAdapter,
@@ -423,15 +424,13 @@ class FAERSAdapter(BaseSourceAdapter):
             """
         }
 
-    def get_resolution_policy(self):
+    def get_resolution_policy(self) -> ResolutionPolicy:
         """Returns the FAERS-specific deterministic resolution policy for derived tier indexing.
 
         Explicitly declares FAERS canonical entity/record keys (`case_id`, `primary_id`),
         precedence columns (`canonical_case_version`, `latest_regulatory_date`,
         `manufacturer_date`), numeric `primary_id` tie-breaker, and all 6 FAERS child tables.
         """
-        from raxtik_etl.indexing.models import ResolutionPolicy
-
         return ResolutionPolicy(
             entity_key="case_id",
             record_key="primary_id",
