@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-11-26
+
+**Full Changelog**: https://github.com/raxtik-org/raxtik-source-faers/compare/v0.1.0.dev2...v0.1.0
+
+### Added
+- First stable release of `raxtik-source-faers`, aligned with `raxtik-etl>=0.1.0,<0.2.0` and the verified 91-quarter (`2004Q1..2026Q3`) FAERS/AERS dataset (`v0.1.0`) on Hugging Face Hub.
+- Fail-closed mandatory table enforcement (`demo`, `drug`, `reac`) in `FAERSAdapter.extract_and_load()`.
+- PyPI SEO & funding metadata and Silver Tier README quickstart.
+
+### Fixed
+- Propagate unexpected (non-`CatalogException`) DuckDB errors during table row counting instead of defaulting to `0`.
+
 ## [0.1.0.dev2] - 2026-11-25
 
 **Full Changelog**: https://github.com/raxtik-org/raxtik-source-faers/compare/v0.1.0.dev1...v0.1.0.dev2

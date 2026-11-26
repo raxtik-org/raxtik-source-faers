@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "raxtik-source-faers"
-version = "0.1.0.dev2"
+version = "0.1.0"
 description = "Official FDA FAERS/AERS data connector, parser, and extractor for raxtik-etl"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -45,7 +45,7 @@ classifiers = [
 ]
 dependencies = [
     "duckdb>=1.1.0",
-    "raxtik-etl>=0.1.0.dev3",
+    "raxtik-etl>=0.1.0,<0.2.0",
     "requests>=2.31.0",
     "certifi>=2026.10.19",
     "rich>=13.0.0",

@@ -264,10 +264,9 @@ class FAERSAdapter(BaseSourceAdapter):
                 )
                 row_counts[tbl] = 0
             except Exception as err:
-                console.print(
-                    f"[bold red]Unexpected error reading count for table '{tbl}':[/bold red] {err}"
-                )
-                row_counts[tbl] = 0
+                raise RuntimeError(
+                    f"Unexpected error reading row count for table '{tbl}' ({data_period}): {err}"
+                ) from err
 
         source_files = [
             {
