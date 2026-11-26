@@ -80,19 +80,19 @@ with FAERS.from_hf("2024Q1") as faers:
     cases = faers.cases(limit=100)
     print(cases)
 
-# 2. Zero-Disk Streaming: Streams directly over HTTPS without local downloads
+# 2. Remote Streaming (No Full Dataset Download): Streams directly over HTTPS
 with FAERS.from_hf("2024Q1", remote=True) as faers:
     cases = faers.cases(limit=100)
     print(cases)
 
-# 3. Silver Tier (Cross-Quarter Deduplication + Case Timeline + Point-in-Time)
+# 3. Quarter-Scoped Silver Tier (winning cases in 2024Q1 as of 2025Q4 + full case timeline)
 with FAERS.from_hf("2024Q1", tier="silver", remote=True, as_of_period="2025Q4") as faers:
     cases = faers.cases(limit=100)
     timeline = faers.case_timeline(str(cases["case_id"][0]))
     print(timeline)
 ```
 
-### 2. Remote Querying via DuckDB (Zero Local Storage)
+### 2. Remote Querying via DuckDB (No Full Dataset Download)
 Query precompiled datasets on Hugging Face Hub over HTTPS without downloading full files to disk.
 
 #### Option A: Remote DuckDB `ATTACH` (Single File URL, Full Schema & Views)
